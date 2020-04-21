@@ -1,0 +1,314 @@
+#+TITLE: GNU Emacs configuration
+#+STARTUP: indent
+#+OPTIONS: H:5 num:nil tags:nil toc:nil timestamps:t
+#+LAYOUT: post
+#+DESCRIPTION: Loading emacs configuration using org-babel
+#+TAGS: emacs
+#+CATEGORIES: editing
+
+* Introduction
+This is my version of an configuration file for GNU Emacs. I have been using GNU Emacs since Dec, 2019.
+
+You can find the latest version of this configuration at
+https://github.com/root-stack/emacs-config or at https://gitlab.com/root-stack/emacs-config.
+
+#+BEGIN_SRC emacs-lisp
+  (setq user-full-name "Enigma")
+  (setq user-mail-address "root.stack.0@gmail.com")
+#+END_SRC
+
+
+* Emacs Security Configuration
+Check tsl certificates, fail if something is untrusted or wrong in either way. Don’t let Hacker hack my Emacs.
+
+#+BEGIN_SRC emacs-lisp
+ (setq gnutls-verify-error t)
+ (setq tls-checktrust t)
+#+END_SRC
+
+
+* Package Manager Installation
+I’m using Straight for package management. Here goes bootstrapping code:
+
+#+BEGIN_SRC emacs-lisp
+(setq straight-use-package-by-default t)
+ (let ((bootstrap-file (concat user-emacs-directory "straight/repos/straight.el/bootstrap.el"))
+	(bootstrap-version 3))
+   (unless (file-exists-p bootstrap-file)
+     (with-current-buffer
+	  (url-retrieve-synchronously
+	   "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+	   'silent 'inhibit-cookies)
+	(goto-char (point-max))
+	(eval-print-last-sexp)))
+   (load bootstrap-file nil 'nomessage))
+;; and also install use-package by using Straight
+(straight-use-package 'use-package)
+
+(require 'package)
+(setq package-enable-at-startup nil)
+(add-to-list 'package-archives
+'("melpa" .  "https://melpa.org/packages/"))
+(package-initialize)
+
+(use-package try
+:ensure t)
+#+END_SRC
+
+
+* Look and Feel
+** Font Configuration
+#+BEGIN_SRC emacs-lisp
+  (setq vj/font-name "Hack")
+  (defcustom vj/font-size 10 "My default font size")
+
+  (defun set-frame-font-size (&optional font-size)
+    "Change frame font size to FONT-SIZE.
+  If no FONT-SIZE provided, reset the font size to its default variable."
+    (let ((font-size
+	   (or font-size
+	       (car (get 'vj/font-size 'standard-value)))))
+      (customize-set-variable 'vj/font-size font-size)
+      (set-frame-font
+       (format "%s %d" vj/font-name font-size) nil t)))
+
+  (defun increase-frame-font ()
+    "Increase frame font by one."
+    (interactive)
+    (set-frame-font-size (+ vj/font-size 1)))
+
+  (defun decrease-frame-font ()
+    "Decrease frame font by one."
+    (interactive)
+    (set-frame-font-size (- vj/font-size 1)))
+
+  (defun reset-frame-font ()
+    "Reset frame font to its default value."
+    (interactive)
+    (set-frame-font-size))
+
+  (add-hook 'after-init-hook 'reset-frame-font)
+#+END_SRC
+** Icon
+#+BEGIN_SRC emacs-lisp
+  (use-package all-the-icons
+    :straight t
+    :config
+    ;; all-the-icons doesn't work without font-lock+
+    ;; And font-lock+ doesn't have autoloads
+    (use-package font-lock+
+      :straight (:host github :repo "emacsmirror/font-lock-plus")
+      :config (require 'font-lock+)))
+
+  (use-package emojify
+    :defer t
+    :straight t)
+#+END_SRC
+** Theme
+*** Installation
+#+BEGIN_SRC emacs-lisp
+(use-package doom-themes
+  :config
+  ;; Global settings (defaults)
+  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally disabled
+  (load-theme 'doom-one t)
+
+  ;; Enable flashing mode-line on errors
+  (doom-themes-visual-bell-config)
+  
+  ;; Enable custom neotree theme (all-the-icons must be installed!)
+  (doom-themes-neotree-config)
+  ;; or for treemacs users
+  (setq doom-themes-treemacs-theme "doom-colors") ; use the colorful treemacs theme
+  (doom-themes-treemacs-config)
+  
+  ;; Corrects (and improves) org-mode's native fontification.
+  (doom-themes-org-config))
+
+  (load-theme 'doom-city-lights t)
+
+#+END_SRC
+*** Configuration
+That's how I enable, and then switch dark and light themes with one key.
+Btw, it's my package, [[https://github.com/valignatev/heaven-and-hell/][Heaven and Hell]].
+#+BEGIN_SRC emacs-lisp
+(setq doom-theme 'doom-one)
+
+;; enable high light mode
+(global-hl-line-mode t)
+
+;; enable show matching parenthesis
+(show-paren-mode t)
+
+;; enable colurm mode
+(column-number-mode t)
+
+;; use doom modle line
+(use-package doom-modeline
+  :straight t
+  :defer t
+  :hook (after-init . doom-modeline-init))
+#+END_SRC
+** Disable Emacs Annoying Things
+#+BEGIN_SRC emacs-lisp
+;; Disable Annoying Bell
+(setq ring-bell-function 'ignore)
+
+;; Disable startup message and exit dialog
+(setq inhibit-startup-message t
+	inhibit-splash-screen t
+       x-gtk-use-system-tooltips nil
+       use-dialog-box nil)
+
+;; hide toolbar menu-bar scrollbar
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(blink-cursor-mode 0)
+
+;; fixing rectangle-number-lines pattern which inserts bogus space
+
+(defun rectangle--default-line-number-format (start end start-at)
+  (concat "%"
+	  (int-to-string (length (int-to-string (+ (count-lines start end)
+						   start-at))))
+	  "d"))
+#+END_SRC   
+
+
+* Terminal
+Open =$TERMINAL= in a project root
+#+BEGIN_SRC emacs-lisp
+  (defun vj/terminal-in-project-root (arg)
+    (interactive "P")
+    (let ((default-directory
+	    (if arg default-directory
+	      (projectile-project-root))))
+      (start-process "terminal" nil (getenv "TERMINAL"))))
+
+  (global-set-key (kbd "C-x t") 'vj/terminal-in-project-root)
+#+END_SRC
+ 
+
+* Programming
+** Project
+[[https://github.com/bbatsov/projectile/][Projectile]] for working with projects. You can also chose another on name  project dired.
+#+BEGIN_SRC emacs-lisp
+(use-package projectile
+  :straight t
+  :init
+  (setq projectile-switch-project-action #'projectile-dired)
+  (setq projectile-completion-system 'ivy)
+  :config
+  (projectile-mode 1)
+  :bind-keymap ("C-c p" . projectile-command-map))
+#+END_SRC
+
+
+* Search
+#+BEGIN_SRC emacs-lisp
+  (use-package swiper
+    :straight t
+    :after ivy
+    :config
+    (define-key global-map [remap isearch-forward] 'swiper))
+#+END_SRC
+
+
+* Git
+I am using magit for git
+ #+BEGIN_SRC emacs-lisp
+ (use-package magit
+   :straight t
+   :bind ("C-x g" . magit-status))
+
+;; Git gutter functionality is provided by [[https://github.com/dgutov/diff-hl/][diff-hl]]. It's the only package
+;; which works well with Emacs 26+. Maybe it belongs to the Theming section, idk.
+(use-package diff-hl
+     :straight t
+     :hook ((dired-mode . diff-hl-dired-mode)
+	    (magit-post-refresh . diff-hl-magit-post-refresh))
+     :custom (diff-hl-flydiff-delay 0.5)
+     :config
+     (global-diff-hl-mode t))
+
+(use-package diff-hl
+     :straight t
+     :hook ((dired-mode . diff-hl-dired-mode)
+	    (magit-post-refresh . diff-hl-magit-post-refresh))
+     :custom (diff-hl-flydiff-delay 0.5)
+     :config
+     (global-diff-hl-mode t))
+
+(use-package gitignore-mode
+     :straight t)
+#+END_SRC
+
+
+* Auto Completeion 
+Here's general config for autocompletion in my Emacs. I'm using [[https://github.com/company-mode/company-mode/][company-mode]].
+For now, I enable company only for prog-mode.
+#+BEGIN_SRC emacs-lisp
+(use-package company
+  :straight t
+  :custom
+  (company-require-match nil)
+  (company-minimum-prefix-length 1)
+  (company-idle-delay 0.2)
+  (company-tooltip-align-annotation t)
+  (company-frontends '(company-pseudo-tooltip-frontend
+		       company-echo-metadata-frontend))
+  :hook ((prog-mode . company-mode))
+  :bind (:map company-active-map
+         ("C-n" . company-select-next)
+         ("C-p" . company-select-previous)))
+#+END_SRC
+
+
+* Org Mode Suff
+#+BEGIN_SRC emacs-lisp
+(use-package org-bullets
+ :straight t
+ :config(add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+#+END_SRC
+
+
+* Auto save behaviour , backup and history
+** when and how to save
+Save opened buffers, save exact point in the buffer,
+save when I'm closing or switching off the focus.
+Also, obey changes from the outside of Emacs.
+#+BEGIN_SRC emacs-lisp
+  (desktop-save-mode t)
+  (save-place-mode t)
+  (add-hook 'focus-out-hook (lambda () (interactive) (save-some-buffers t)))
+  ;; save when frame is closed
+  (add-hook 'delete-frame-functions (lambda () (interactive) (save-some-buffers t)))
+  (global-auto-revert-mode t)
+  (setq global-auto-revert-non-file-buffers t)
+  (setq auto-revert-verbose nil)
+#+END_SRC
+** cleanup Emacs backup noise
+I want to move out of the current directory things such as backups, lockfiles,
+autosaves. TRAMP backups are configured here as well.
+#+BEGIN_SRC emacs-lisp
+  (setq backup-directory-alist
+	`(("." . ,(concat user-emacs-directory "backups"))))
+  (setq delete-old-versions t)
+  (setq autosave-dir (format "%s%s" user-emacs-directory "autosave/"))
+  (setq auto-save-list-file-prefix autosave-dir)
+  (setq auto-save-file-name-transforms `((".*"  ,autosave-dir t)))
+  (setq tramp-backup-directory-alist backup-directory-alist)
+#+END_SRC
+** history
+I want a bit longer history of my minibuffer commands after restart.
+And, of course, undo-tree history, it's awesome.
+#+BEGIN_SRC emacs-lisp
+ (setq history-length 200)
+ (savehist-mode)
+ (setq undo-tree-auto-save-history t)
+ (setq undo-tree-history-directory-alist
+       `((".*" . ,(concat user-emacs-directory "undo/"))))
+#+END_SRC
+
