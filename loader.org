@@ -10,7 +10,7 @@
 This is my version of an configuration file for GNU Emacs. I have been using GNU Emacs since Dec, 2019.
 
 You can find the latest version of this configuration at
-https://github.com/root-stack/emacs-config or at https://gitlab.com/root-stack/emacs-config.
+https://github.com/nigma-dev/emacs-config.
 
 #+BEGIN_SRC emacs-lisp
   (setq user-full-name "Enigma")
