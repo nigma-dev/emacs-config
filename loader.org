@@ -13,8 +13,8 @@ You can find the latest version of this configuration at
 https://github.com/nigma-dev/emacs-config.
 
 #+BEGIN_SRC emacs-lisp
-  (setq user-full-name "Enigma")
-  (setq user-mail-address "root.stack.0@gmail.com")
+  (setq user-full-name "nigma")
+  (setq user-mail-address "mail@nigma.dev")
 #+END_SRC
 
 
